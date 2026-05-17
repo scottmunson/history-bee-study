@@ -57,6 +57,13 @@ nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 .buzz-btn { background: var(--danger) !important; color: white !important; font-size: 24px !important; padding: 18px 52px !important; border-radius: 50px !important; border: none !important; cursor: pointer; font-weight: 700; box-shadow: var(--shadow2); transition: transform 0.1s; min-height: 60px; }
 .buzz-btn:hover { transform: scale(1.05); }
 .buzz-btn:active { transform: scale(0.95); }
+/* Buzzer clue rows — stable layout with numbered bullets */
+.buzzer-clue-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.buzzer-clue-num { font-weight: 700; color: var(--accent); min-width: 24px; font-size: 16px; line-height: 1.8; flex-shrink: 0; }
+.buzzer-clue-text { font-size: 20px; line-height: 1.8; }
+.buzzer-clue-text.unrevealed { color: var(--text3); opacity: 0.35; font-style: italic; letter-spacing: 2px; }
+.buzzer-clue-text.revealed { color: var(--text); animation: clueReveal 0.4s ease-out; }
+@keyframes clueReveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .clue-counter { font-size: 13px; color: var(--text3); margin: 8px 0; text-align: center; }
 .answer-input-area { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
 .answer-input-area input { padding: 14px 20px; font-size: 18px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); min-width: 260px; max-width: 100%; min-height: 48px; }
@@ -183,6 +190,8 @@ nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tab-content { padding: 16px; }
   .buzzer-area { padding: 20px; }
   .question-display { font-size: 16px; padding: 14px 16px; }
+  .buzzer-clue-text { font-size: 16px; }
+  .buzzer-clue-num { font-size: 14px; }
   .fc-study-area { padding: 0; }
   .fc-card-single { padding: 20px; }
   .fc-card-single .fc-prompt { font-size: 16px; }
