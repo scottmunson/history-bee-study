@@ -1,4 +1,5 @@
-const ALL_QUESTIONS = ALL_QUESTIONS_1.concat(ALL_QUESTIONS_2);
+var APP_VERSION = '1.1.0';
+var ALL_QUESTIONS = ALL_QUESTIONS_1.concat(ALL_QUESTIONS_2);
 
 // ===== STORAGE =====
 function loadData(key, fallback) {
@@ -281,9 +282,9 @@ function showBuzzerQuestion() {
     updateTimerBar();
   }
   revealNextSentence();
-  buzzerState.timer = setInterval(revealNextSentence, 5000);
+  buzzerState.timer = setInterval(revealNextSentence, 8000);
 
-  var totalTime = buzzerState.totalSentences * 5000 + 5000;
+  var totalTime = buzzerState.totalSentences * 8000 + 5000;
   buzzerState.totalTime = totalTime;
   buzzerState.timerInterval = setTimeout(function() {
     if (!buzzerState.buzzed) {
@@ -392,7 +393,7 @@ function checkBuzzerAnswer() {
     buzzerState.correct++;
     buzzerState.streak++;
   } else {
-    points = -5;
+    points = 0;
     buzzerState.streak = 0;
   }
   buzzerState.score += points;
@@ -748,7 +749,44 @@ var quizState = {
   selectedAnswer: null
 };
 
-// Pre-build category answer pools for smarter distractors
+// Pre-build keyword index for smart quiz distractors
+var STOP_WORDS = {the:1,a:1,an:1,of:1,in:1,to:1,was:1,is:1,are:1,were:1,this:1,that:1,these:1,those:1,for:1,and:1,but:1,not:1,with:1,from:1,has:1,had:1,have:1,been:1,its:1,his:1,her:1,their:1,who:1,which:1,what:1,when:1,where:1,how:1,one:1,also:1,known:1,called:1,after:1,before:1,during:1,more:1,than:1,only:1,both:1,each:1,they:1,them:1,would:1,could:1,did:1,does:1,made:1,took:1,gave:1,come:1,came:1,went:1,said:1,name:1,point:1,points:1,used:1,many:1,some:1,most:1,other:1,into:1,over:1,under:1,about:1,between:1,being:1,such:1,same:1,will:1,shall:1,may:1,might:1,can:1,ten:1,two:1,three:1,first:1,last:1,upon:1,like:1,well:1};
+function getKeywords(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(function(w) {
+    return w.length >= 4 && !STOP_WORDS[w];
+  });
+}
+var keywordIndex = {};
+ALL_QUESTIONS.forEach(function(q, i) {
+  getKeywords(q.q).forEach(function(kw) {
+    if (!keywordIndex[kw]) keywordIndex[kw] = [];
+    keywordIndex[kw].push(i);
+  });
+});
+function findSimilarAnswers(q, count) {
+  var kws = getKeywords(q.q);
+  var scores = {};
+  kws.forEach(function(kw) {
+    var matches = keywordIndex[kw] || [];
+    matches.forEach(function(idx) {
+      if (ALL_QUESTIONS[idx].a !== q.a) {
+        scores[idx] = (scores[idx] || 0) + 1;
+      }
+    });
+  });
+  var sorted = Object.keys(scores).sort(function(a, b) { return scores[b] - scores[a]; });
+  var answers = [];
+  var seen = {};
+  for (var i = 0; i < sorted.length && answers.length < count; i++) {
+    var ans = ALL_QUESTIONS[sorted[i]].a;
+    if (!seen[ans]) {
+      seen[ans] = true;
+      answers.push(ans);
+    }
+  }
+  return answers;
+}
+// Also keep category pools as fallback
 var catAnswerPools = {};
 ALL_QUESTIONS.forEach(function(q) {
   var cat = getQuestionCat(q);
@@ -786,26 +824,24 @@ function showQuizQuestion() {
   var q = quizState.questions[quizState.qIndex];
   quizState.selectedAnswer = null;
 
-  // Smart distractors: prefer same category for plausible wrong answers
-  var qCat = getQuestionCat(q);
-  var sameCatAnswers = (catAnswerPools[qCat] || []).filter(function(a) { return a !== q.a; });
-  var otherAnswers = [];
-  for (var c in catAnswerPools) {
-    if (c !== qCat) {
-      catAnswerPools[c].forEach(function(a) {
-        if (a !== q.a) otherAnswers.push(a);
-      });
-    }
-  }
+  // Smart distractors: use keyword similarity to find topically related wrong answers
+  var similar = findSimilarAnswers(q, 6);
+  var wrongAnswers = shuffle(similar).slice(0, 3);
 
-  var wrongAnswers = [];
-  var sameCatShuffled = shuffle(sameCatAnswers);
-  var fromSameCat = Math.min(sameCatShuffled.length, 2);
-  wrongAnswers = sameCatShuffled.slice(0, fromSameCat);
+  // Fallback: if not enough similar, fill from same category
   if (wrongAnswers.length < 3) {
-    var remaining = 3 - wrongAnswers.length;
-    var otherShuffled = shuffle(otherAnswers);
-    wrongAnswers = wrongAnswers.concat(otherShuffled.slice(0, remaining));
+    var qCat = getQuestionCat(q);
+    var sameCat = shuffle((catAnswerPools[qCat] || []).filter(function(a) {
+      return a !== q.a && wrongAnswers.indexOf(a) === -1;
+    }));
+    wrongAnswers = wrongAnswers.concat(sameCat.slice(0, 3 - wrongAnswers.length));
+  }
+  // Last resort: fill from any pool
+  if (wrongAnswers.length < 3) {
+    var allAnswers = ALL_QUESTIONS.map(function(qq) { return qq.a; }).filter(function(a) {
+      return a !== q.a && wrongAnswers.indexOf(a) === -1;
+    });
+    wrongAnswers = wrongAnswers.concat(shuffle(allAnswers).slice(0, 3 - wrongAnswers.length));
   }
 
   var options = shuffle([q.a].concat(wrongAnswers.slice(0, 3)));
@@ -1061,6 +1097,7 @@ function renderDashboard() {
   html += '<div class="dash-card" style="margin-bottom:20px"><h3>Data</h3>';
   html += '<p style="font-size:14px;color:var(--text3);margin-bottom:12px">Your progress is saved on this device.</p>';
   html += '<button id="resetDataBtn" style="padding:10px 20px;border-radius:var(--radius);border:1px solid var(--danger);background:transparent;color:var(--danger);cursor:pointer;font-size:14px">Reset All Progress</button>';
+  html += '<div style="margin-top:16px;font-size:12px;color:var(--text3)">v' + APP_VERSION + ' &middot; ' + ALL_QUESTIONS.length + ' questions &middot; ' + ALL_TOPICS.length + ' topics</div>';
   html += '</div>';
 
   document.getElementById('dashContent').innerHTML = html;
