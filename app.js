@@ -1,4 +1,4 @@
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.2.0';
 var ALL_QUESTIONS = ALL_QUESTIONS_1.concat(ALL_QUESTIONS_2);
 
 // ===== STORAGE =====
@@ -234,6 +234,40 @@ function formatSentences(sentences, el) {
   });
 }
 
+// Pre-render all clue slots so the buzzer layout never shifts
+function renderBuzzerClueSlots(sentences, display) {
+  display.innerHTML = '';
+  sentences.forEach(function(s, i) {
+    var row = document.createElement('div');
+    row.className = 'buzzer-clue-row';
+    row.setAttribute('data-clue-index', i);
+    var num = document.createElement('span');
+    num.className = 'buzzer-clue-num';
+    num.textContent = (i + 1) + '.';
+    var text = document.createElement('span');
+    text.className = 'buzzer-clue-text unrevealed';
+    text.textContent = '• • •';
+    row.appendChild(num);
+    row.appendChild(text);
+    display.appendChild(row);
+  });
+}
+
+function revealBuzzerClue(display, index, sentence) {
+  var row = display.querySelector('[data-clue-index="' + index + '"]');
+  if (!row) return;
+  var text = row.querySelector('.buzzer-clue-text');
+  text.textContent = sentence.trim();
+  text.classList.remove('unrevealed');
+  text.classList.add('revealed');
+}
+
+function revealAllBuzzerClues(display, sentences) {
+  sentences.forEach(function(s, i) {
+    revealBuzzerClue(display, i, s);
+  });
+}
+
 function updateBuzzerStats() {
   document.getElementById('bScore').textContent = buzzerState.score;
   document.getElementById('bQNum').textContent = (buzzerState.qIndex + 1) + '/' + buzzerState.questions.length;
@@ -267,12 +301,14 @@ function showBuzzerQuestion() {
   document.getElementById('buzzBtn').addEventListener('click', handleBuzz);
 
   var display = document.getElementById('qDisplay');
-  display.textContent = '';
+  // Pre-render all clue slots so layout is stable from the start
+  renderBuzzerClueSlots(buzzerState.sentences, display);
+
   function revealNextSentence() {
     if (buzzerState.sentenceIndex < buzzerState.sentences.length) {
+      revealBuzzerClue(display, buzzerState.sentenceIndex, buzzerState.sentences[buzzerState.sentenceIndex]);
       var shown = buzzerState.sentences.slice(0, buzzerState.sentenceIndex + 1);
       buzzerState.wordIndex = shown.join(' ').split(/\s+/).length;
-      formatSentences(shown, display);
       var counter = document.getElementById('clueCounter');
       if (counter) counter.textContent = 'Clue ' + (buzzerState.sentenceIndex + 1) + ' of ' + buzzerState.totalSentences;
       buzzerState.sentenceIndex++;
@@ -312,7 +348,7 @@ function handleBuzz() {
   clearTimeout(buzzerState.timerInterval);
 
   var display = document.getElementById('qDisplay');
-  formatSentences(buzzerState.sentences, display);
+  revealAllBuzzerClues(display, buzzerState.sentences);
 
   var area = document.getElementById('buzzerArea');
   var buzzBtn = document.getElementById('buzzBtn');
@@ -447,7 +483,7 @@ function timeUp() {
   var q = buzzerState.questions[buzzerState.qIndex];
   var area = document.getElementById('buzzerArea');
   var display = document.getElementById('qDisplay');
-  formatSentences(buzzerState.sentences, display);
+  revealAllBuzzerClues(display, buzzerState.sentences);
 
   var buzzBtn = document.getElementById('buzzBtn');
   if (buzzBtn) buzzBtn.style.display = 'none';
@@ -763,6 +799,24 @@ ALL_QUESTIONS.forEach(function(q, i) {
     keywordIndex[kw].push(i);
   });
 });
+// Fuzzy dedup: detect when two answers are essentially the same
+// e.g. "Qing" vs "Qing Dynasty", "Rome" vs "Roman Empire"
+function answersAreSimilar(a, b) {
+  var na = a.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  var nb = b.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  if (na === nb) return true;
+  // One contains the other (e.g. "Qing" inside "Qing Dynasty")
+  if (na.length >= 3 && nb.length >= 3) {
+    if (na.includes(nb) || nb.includes(na)) return true;
+  }
+  // Strip common suffixes and compare core
+  var suffixes = /\s*(dynasty|empire|republic|kingdom|civilization|revolution|war|treaty|battle|river|ocean|sea|lake|islands?|mountains?)$/i;
+  var coreA = na.replace(suffixes, '').trim();
+  var coreB = nb.replace(suffixes, '').trim();
+  if (coreA.length >= 3 && coreB.length >= 3 && coreA === coreB) return true;
+  return false;
+}
+
 function findSimilarAnswers(q, count) {
   var kws = getKeywords(q.q);
   var scores = {};
@@ -780,8 +834,17 @@ function findSimilarAnswers(q, count) {
   for (var i = 0; i < sorted.length && answers.length < count; i++) {
     var ans = ALL_QUESTIONS[sorted[i]].a;
     if (!seen[ans]) {
-      seen[ans] = true;
-      answers.push(ans);
+      // Check fuzzy dedup: skip if too similar to correct answer or any already-picked answer
+      var dominated = answersAreSimilar(ans, q.a);
+      if (!dominated) {
+        for (var j = 0; j < answers.length; j++) {
+          if (answersAreSimilar(ans, answers[j])) { dominated = true; break; }
+        }
+      }
+      if (!dominated) {
+        seen[ans] = true;
+        answers.push(ans);
+      }
     }
   }
   return answers;
@@ -828,18 +891,26 @@ function showQuizQuestion() {
   var similar = findSimilarAnswers(q, 6);
   var wrongAnswers = shuffle(similar).slice(0, 3);
 
-  // Fallback: if not enough similar, fill from same category
+  // Fallback: if not enough similar, fill from same category (with fuzzy dedup)
   if (wrongAnswers.length < 3) {
     var qCat = getQuestionCat(q);
     var sameCat = shuffle((catAnswerPools[qCat] || []).filter(function(a) {
-      return a !== q.a && wrongAnswers.indexOf(a) === -1;
+      if (a === q.a || answersAreSimilar(a, q.a)) return false;
+      for (var k = 0; k < wrongAnswers.length; k++) {
+        if (a === wrongAnswers[k] || answersAreSimilar(a, wrongAnswers[k])) return false;
+      }
+      return true;
     }));
     wrongAnswers = wrongAnswers.concat(sameCat.slice(0, 3 - wrongAnswers.length));
   }
-  // Last resort: fill from any pool
+  // Last resort: fill from any pool (with fuzzy dedup)
   if (wrongAnswers.length < 3) {
     var allAnswers = ALL_QUESTIONS.map(function(qq) { return qq.a; }).filter(function(a) {
-      return a !== q.a && wrongAnswers.indexOf(a) === -1;
+      if (a === q.a || answersAreSimilar(a, q.a)) return false;
+      for (var k = 0; k < wrongAnswers.length; k++) {
+        if (a === wrongAnswers[k] || answersAreSimilar(a, wrongAnswers[k])) return false;
+      }
+      return true;
     });
     wrongAnswers = wrongAnswers.concat(shuffle(allAnswers).slice(0, 3 - wrongAnswers.length));
   }
