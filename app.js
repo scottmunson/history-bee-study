@@ -1,5 +1,13 @@
-var APP_VERSION = '1.3.0';
-var ALL_QUESTIONS = ALL_QUESTIONS_1.concat(ALL_QUESTIONS_2);
+var APP_VERSION = '1.3.1';
+// Defensive: handle missing question files gracefully
+var _q1 = (typeof ALL_QUESTIONS_1 !== 'undefined') ? ALL_QUESTIONS_1 : [];
+var _q2 = (typeof ALL_QUESTIONS_2 !== 'undefined') ? ALL_QUESTIONS_2 : [];
+// Runtime cleanup: strip metadata prefixes left over from PDF extraction
+var METADATA_PREFIX = /^[-–•]\s*\d{4}-\d{2}-\d{2}\s+(?:Round\s+\d+\s+)?(?:Round\s+\d+\s+)?(?:Finals\s+)?(?:Finals\s+)?(?:Regulation\s+)?(?:Tossups?\s+)?(?:\(\d+\)\s+)?/;
+_q1.concat(_q2).forEach(function(q) {
+  if (METADATA_PREFIX.test(q.q)) q.q = q.q.replace(METADATA_PREFIX, '');
+});
+var ALL_QUESTIONS = _q1.concat(_q2);
 
 // ===== STORAGE =====
 function loadData(key, fallback) {
@@ -301,7 +309,6 @@ function showBuzzerQuestion() {
   document.getElementById('buzzBtn').addEventListener('click', handleBuzz);
 
   var display = document.getElementById('qDisplay');
-  // Pre-render all clue slots so layout is stable from the start
   renderBuzzerClueSlots(buzzerState.sentences, display);
 
   function revealNextSentence() {
@@ -457,7 +464,6 @@ function checkBuzzerAnswer() {
   if (!isCorrect && userAns) correctDiv.innerHTML += '<br><span style="color:var(--text3);font-size:13px">You said: ' + escHtml(userAns) + '</span>';
   area.appendChild(correctDiv);
 
-  // Teachable moment — show facts to help learn
   var learnHTML = renderTeachableMoment(q.a);
   if (learnHTML) {
     var learnDiv = document.createElement('div');
@@ -536,7 +542,6 @@ function timeUp() {
     if (!isCorrect && userAns) correctDiv.innerHTML += '<br><span style="color:var(--text3);font-size:13px">You said: ' + escHtml(userAns) + '</span>';
     area.appendChild(correctDiv);
 
-    // Teachable moment
     var learnHTML = renderTeachableMoment(q.a);
     if (learnHTML) {
       var learnDiv = document.createElement('div');
@@ -578,7 +583,6 @@ function showBuzzerSummary() {
   });
 }
 
-// Space bar to buzz
 document.addEventListener('keydown', function(e) {
   if (e.code === 'Space' && buzzerState.active && !buzzerState.buzzed && document.getElementById('tab-buzzer').classList.contains('active')) {
     e.preventDefault();
@@ -590,7 +594,6 @@ document.addEventListener('keydown', function(e) {
 var fcState = { cards: [], index: 0, revealed: false };
 var fcMastery = loadData('fcMastery') || {};
 
-// Populate flashcard round filter dynamically from actual data
 (function() {
   var rounds = [], seen = {};
   ALL_QUESTIONS.forEach(function(q) {
@@ -690,7 +693,6 @@ function revealFlashcardAnswer(q) {
     '<div class="fc-answer-name">' + escHtml(q.a) + '</div>' + metaHTML;
   card.appendChild(answerDiv);
 
-  // Teachable moment — show facts to help learn
   var learnHTML = renderTeachableMoment(q.a);
   if (learnHTML) {
     var learnDiv = document.createElement('div');
@@ -698,7 +700,6 @@ function revealFlashcardAnswer(q) {
     card.appendChild(learnDiv.firstChild);
   }
 
-  // Action buttons
   var actions = document.createElement('div');
   actions.className = 'fc-actions';
   actions.innerHTML = '<button class="fc-btn-mastered" title="I got it right">Got it!</button>' +
@@ -757,7 +758,6 @@ function advanceFlashcard() {
   }
 }
 
-// Keyboard: Space to reveal, right arrow to advance
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('tab-flashcards').classList.contains('active')) return;
   if (e.code === 'Space' && !fcState.revealed && fcState.cards.length > 0) {
@@ -785,7 +785,6 @@ var quizState = {
   selectedAnswer: null
 };
 
-// Pre-build keyword index for smart quiz distractors
 var STOP_WORDS = {the:1,a:1,an:1,of:1,in:1,to:1,was:1,is:1,are:1,were:1,this:1,that:1,these:1,those:1,for:1,and:1,but:1,not:1,with:1,from:1,has:1,had:1,have:1,been:1,its:1,his:1,her:1,their:1,who:1,which:1,what:1,when:1,where:1,how:1,one:1,also:1,known:1,called:1,after:1,before:1,during:1,more:1,than:1,only:1,both:1,each:1,they:1,them:1,would:1,could:1,did:1,does:1,made:1,took:1,gave:1,come:1,came:1,went:1,said:1,name:1,point:1,points:1,used:1,many:1,some:1,most:1,other:1,into:1,over:1,under:1,about:1,between:1,being:1,such:1,same:1,will:1,shall:1,may:1,might:1,can:1,ten:1,two:1,three:1,first:1,last:1,upon:1,like:1,well:1};
 function getKeywords(text) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(function(w) {
@@ -799,10 +798,8 @@ ALL_QUESTIONS.forEach(function(q, i) {
     keywordIndex[kw].push(i);
   });
 });
-// Fuzzy dedup: detect when two answers are essentially the same
-// e.g. "Qing" vs "Qing Dynasty", "Mayas" vs "Mayan Civilization"
+
 function deplural(w) {
-  // Light plural stripping only: Mayas->Maya, Romans->Roman, Aztecs->Aztec
   if (w.length >= 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
   if (w.length >= 4 && w.endsWith('es') && !w.endsWith('ses') && !w.endsWith('zes')) return w.slice(0, -2);
   if (w.length >= 4 && w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us')) return w.slice(0, -1);
@@ -817,16 +814,13 @@ function answersAreSimilar(a, b) {
   var na = a.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
   var nb = b.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
   if (na === nb) return true;
-  // One contains the other (e.g. "Qing" inside "Qing Dynasty")
   if (na.length >= 3 && nb.length >= 3) {
     if (na.includes(nb) || nb.includes(na)) return true;
   }
-  // Strip common suffixes and compare core
   var suffixes = /\s*(dynasty|empire|republic|kingdom|civilization|revolution|war|treaty|battle|river|ocean|sea|lake|islands?|mountains?)$/i;
   var coreA = na.replace(suffixes, '').trim();
   var coreB = nb.replace(suffixes, '').trim();
   if (coreA.length >= 3 && coreB.length >= 3 && coreA === coreB) return true;
-  // Depluralize and recheck containment (handles Mayas vs Mayan Civilization, Romans vs Roman Empire)
   var dpA = depluralPhrase(coreA);
   var dpB = depluralPhrase(coreB);
   if (dpA.length >= 3 && dpB.length >= 3 && dpA === dpB) return true;
@@ -853,7 +847,6 @@ function findSimilarAnswers(q, count) {
   for (var i = 0; i < sorted.length && answers.length < count; i++) {
     var ans = ALL_QUESTIONS[sorted[i]].a;
     if (!seen[ans]) {
-      // Check fuzzy dedup: skip if too similar to correct answer or any already-picked answer
       var dominated = answersAreSimilar(ans, q.a);
       if (!dominated) {
         for (var j = 0; j < answers.length; j++) {
@@ -868,7 +861,7 @@ function findSimilarAnswers(q, count) {
   }
   return answers;
 }
-// Also keep category pools as fallback
+
 var catAnswerPools = {};
 ALL_QUESTIONS.forEach(function(q) {
   var cat = getQuestionCat(q);
@@ -906,11 +899,9 @@ function showQuizQuestion() {
   var q = quizState.questions[quizState.qIndex];
   quizState.selectedAnswer = null;
 
-  // Smart distractors: use keyword similarity to find topically related wrong answers
   var similar = findSimilarAnswers(q, 6);
   var wrongAnswers = shuffle(similar).slice(0, 3);
 
-  // Fallback: if not enough similar, fill from same category (with fuzzy dedup)
   if (wrongAnswers.length < 3) {
     var qCat = getQuestionCat(q);
     var sameCat = shuffle((catAnswerPools[qCat] || []).filter(function(a) {
@@ -922,7 +913,6 @@ function showQuizQuestion() {
     }));
     wrongAnswers = wrongAnswers.concat(sameCat.slice(0, 3 - wrongAnswers.length));
   }
-  // Last resort: fill from any pool (with fuzzy dedup)
   if (wrongAnswers.length < 3) {
     var allAnswers = ALL_QUESTIONS.map(function(qq) { return qq.a; }).filter(function(a) {
       if (a === q.a || answersAreSimilar(a, q.a)) return false;
@@ -980,7 +970,6 @@ function selectQuizAnswer(btn, selected, q) {
     if (opt.textContent === selected && !isCorrect) opt.classList.add('wrong');
   });
 
-  // Show encouragement
   var quizArea = btn.closest('.quiz-area');
   var feedback = document.createElement('div');
   feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
@@ -992,7 +981,6 @@ function selectQuizAnswer(btn, selected, q) {
   }
   quizArea.insertBefore(feedback, document.getElementById('quizNextBtn'));
 
-  // Teachable moment for wrong answers
   if (!isCorrect) {
     var learnHTML = renderTeachableMoment(q.a);
     if (learnHTML) {
@@ -1124,7 +1112,6 @@ document.getElementById('readingSearch').addEventListener('input', function() {
 
 // ===== DASHBOARD =====
 function renderDashboard() {
-  // Use fcMastery (flashcard mastery) for actual progress tracking
   var fcMasteredCount = 0, fcLearningCount = 0, fcTotal = 0;
   for (var key in fcMastery) {
     fcTotal++;
@@ -1148,7 +1135,6 @@ function renderDashboard() {
   html += '<div class="dash-card"><h3>Study Streak</h3><div class="dash-big-num" style="color:var(--warning)">' + streakCount + ' day' + (streakCount !== 1 ? 's' : '') + '</div></div>';
   html += '</div>';
 
-  // Flashcard mastery by category
   html += '<div class="dash-card" style="margin-bottom:20px"><h3>Flashcard Progress by Category</h3>';
   var cats = ['us', 'european', 'asian', 'african', 'ancient', 'latin', 'other'];
   cats.forEach(function(c) {
@@ -1163,7 +1149,6 @@ function renderDashboard() {
   });
   html += '</div>';
 
-  // Buzzer accuracy
   if (buzzerHistory.length > 0) {
     html += '<div class="dash-card" style="margin-bottom:20px"><h3>Buzzer Stats</h3>';
     html += '<div class="progress-bar-container">';
@@ -1172,7 +1157,6 @@ function renderDashboard() {
     html += '</div></div>';
   }
 
-  // Recent quiz scores
   if (quizHistory.length > 0) {
     html += '<div class="dash-card" style="margin-bottom:20px"><h3>Recent Quiz Scores</h3>';
     quizHistory.slice(-10).reverse().forEach(function(q) {
@@ -1183,7 +1167,6 @@ function renderDashboard() {
     html += '</div>';
   }
 
-  // Reset data option
   html += '<div class="dash-card" style="margin-bottom:20px"><h3>Data</h3>';
   html += '<p style="font-size:14px;color:var(--text3);margin-bottom:12px">Your progress is saved on this device.</p>';
   html += '<button id="resetDataBtn" style="padding:10px 20px;border-radius:var(--radius);border:1px solid var(--danger);background:transparent;color:var(--danger);cursor:pointer;font-size:14px">Reset All Progress</button>';
