@@ -1,4 +1,4 @@
-var APP_VERSION = '1.2.0';
+var APP_VERSION = '1.3.0';
 var ALL_QUESTIONS = ALL_QUESTIONS_1.concat(ALL_QUESTIONS_2);
 
 // ===== STORAGE =====
@@ -800,7 +800,19 @@ ALL_QUESTIONS.forEach(function(q, i) {
   });
 });
 // Fuzzy dedup: detect when two answers are essentially the same
-// e.g. "Qing" vs "Qing Dynasty", "Rome" vs "Roman Empire"
+// e.g. "Qing" vs "Qing Dynasty", "Mayas" vs "Mayan Civilization"
+function deplural(w) {
+  // Light plural stripping only: Mayas->Maya, Romans->Roman, Aztecs->Aztec
+  if (w.length >= 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
+  if (w.length >= 4 && w.endsWith('es') && !w.endsWith('ses') && !w.endsWith('zes')) return w.slice(0, -2);
+  if (w.length >= 4 && w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us')) return w.slice(0, -1);
+  return w;
+}
+
+function depluralPhrase(phrase) {
+  return phrase.split(' ').map(deplural).join(' ');
+}
+
 function answersAreSimilar(a, b) {
   var na = a.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
   var nb = b.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -814,6 +826,13 @@ function answersAreSimilar(a, b) {
   var coreA = na.replace(suffixes, '').trim();
   var coreB = nb.replace(suffixes, '').trim();
   if (coreA.length >= 3 && coreB.length >= 3 && coreA === coreB) return true;
+  // Depluralize and recheck containment (handles Mayas vs Mayan Civilization, Romans vs Roman Empire)
+  var dpA = depluralPhrase(coreA);
+  var dpB = depluralPhrase(coreB);
+  if (dpA.length >= 3 && dpB.length >= 3 && dpA === dpB) return true;
+  if (dpA.length >= 3 && dpB.length >= 3) {
+    if (dpA.includes(dpB) || dpB.includes(dpA)) return true;
+  }
   return false;
 }
 
