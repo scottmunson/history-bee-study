@@ -1,1 +1,73 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>History Bee Nationals — Study Hub</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="trophy">&#127942;</span>
+    <h1>History Bee Nationals &mdash; Study Hub</h1>
+  </div>
+  <button class="theme-toggle" id="themeToggle">&#127769; Dark</button>
+</header>
+<nav id="mainNav">
+  <button class="nav-btn active" data-tab="buzzer">Buzzer Practice</button>
+  <button class="nav-btn" data-tab="flashcards">Flashcards</button>
+  <button class="nav-btn" data-tab="quiz">Quiz</button>
+  <button class="nav-btn" data-tab="reading">Reading Material</button>
+  <button class="nav-btn" data-tab="dashboard">Dashboard</button>
+</nav>
+<div class="tab-content active" id="tab-buzzer">
+  <div class="buzzer-controls">
+    <select id="buzzerYear"><option value="">All Years</option></select>
+    <select id="buzzerRound"><option value="">All Rounds</option></select>
+    <button id="startRoundBtn">Start Round (10 Questions)</button>
+  </div>
+  <div class="buzzer-stats">
+    <div class="stat-card"><div class="stat-val" id="bScore">0</div><div class="stat-label">Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="bQNum">0/10</div><div class="stat-label">Question</div></div>
+    <div class="stat-card"><div class="stat-val" id="bStreak">0</div><div class="stat-label">Streak</div></div>
+    <div class="stat-card"><div class="stat-val" id="bAccuracy">-</div><div class="stat-label">Accuracy</div></div>
+  </div>
+  <div class="buzzer-area" id="buzzerArea">
+    <div class="empty-state"><div class="empty-icon">&#128276;</div>
+    <p>Select filters and click "Start Round" to begin buzzer practice!</p>
+    <p style="margin-top:8px;font-size:14px;color:var(--text3)">Press <b>Space</b> to buzz in during a question</p></div>
+  </div>
+</div>
+<div class="tab-content" id="tab-flashcards">
+  <div class="fc-controls">
+    <select id="fcCat"><option value="">All Categories</option><option value="african">African</option><option value="asian">Asian</option><option value="ancient">Ancient</option><option value="european">European</option><option value="latin">Latin American</option><option value="us">U.S.</option><option value="other">Other</option></select>
+    <select id="fcRound"><option value="">All Rounds</option><option value="Regionals">Regionals</option><option value="Nationals">Nationals</option><option value="Finals">Finals</option></select>
+    <select id="fcMastery"><option value="">All Status</option><option value="unseen">Not Studied</option><option value="learning">Still Learning</option><option value="mastered">Got It</option></select>
+    <button id="fcShuffle" style="padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-size:13px;">Shuffle</button>
+  </div>
+  <div class="fc-progress" id="fcProgress"></div>
+  <div class="fc-study-area" id="fcStudyArea"></div>
+</div>
+<div class="tab-content" id="tab-quiz">
+  <div class="quiz-controls">
+    <select id="quizCat"><option value="">All Categories</option><option value="african">African</option><option value="asian">Asian</option><option value="ancient">Ancient</option><option value="european">European</option><option value="latin">Latin American</option><option value="us">U.S.</option><option value="other">Other</option></select>
+    <button id="startQuizBtn">Start Quiz (10 Questions)</button>
+  </div>
+  <div id="quizArea"><div class="empty-state"><div class="empty-icon">&#128221;</div><p>Click "Start Quiz" to begin a 10-question multiple choice quiz!</p></div></div>
+</div>
+<div class="tab-content" id="tab-reading">
+  <div class="reading-controls">
+    <input type="text" class="reading-search" id="readingSearch" placeholder="Search topics...">
+    <select id="readingCat"><option value="">All Categories</option><option value="african">African</option><option value="asian">Asian</option><option value="ancient">Ancient</option><option value="european">European</option><option value="latin">Latin American</option><option value="us">U.S.</option><option value="other">Other</option></select>
+    <select id="readingTier"><option value="">All Tiers</option><option value="0">Hot Topics (2025-2026)</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option><option value="4">Tier 4</option></select>
+  </div>
+  <div id="readingContent"></div>
+</div>
+<div class="tab-content" id="tab-dashboard"><div id="dashContent"></div></div>
+<script src="questions1.js"></script>
+<script src="questions2.js"></script>
+<script src="topics.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
