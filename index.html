@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>History Bee Nationals — Study Hub</title>
 <link rel="stylesheet" href="style.css">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
 </head>
 <body>
 <header>
@@ -35,16 +36,16 @@
   </div>
   <div class="buzzer-area" id="buzzerArea">
     <div class="empty-state"><div class="empty-icon">&#128276;</div>
-    <p>Select filters and click "Start Round" to begin buzzer practice!</p>
-    <p style="margin-top:8px;font-size:14px;color:var(--text3)">Press <b>Space</b> to buzz in during a question</p></div>
+    <p>Select filters and tap "Start Round" to begin buzzer practice!</p>
+    <p style="margin-top:8px;font-size:14px;color:var(--text3)">Press <b>Space</b> or tap <b>BUZZ!</b> to buzz in</p></div>
   </div>
 </div>
 <div class="tab-content" id="tab-flashcards">
   <div class="fc-controls">
     <select id="fcCat"><option value="">All Categories</option><option value="african">African</option><option value="asian">Asian</option><option value="ancient">Ancient</option><option value="european">European</option><option value="latin">Latin American</option><option value="us">U.S.</option><option value="other">Other</option></select>
-    <select id="fcRound"><option value="">All Rounds</option><option value="Regionals">Regionals</option><option value="Nationals">Nationals</option><option value="Finals">Finals</option></select>
+    <select id="fcRound"><option value="">All Rounds</option></select>
     <select id="fcMastery"><option value="">All Status</option><option value="unseen">Not Studied</option><option value="learning">Still Learning</option><option value="mastered">Got It</option></select>
-    <button id="fcShuffle" style="padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-size:13px;">Shuffle</button>
+    <button id="fcShuffle" style="padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-size:14px;min-height:44px;">Shuffle</button>
   </div>
   <div class="fc-progress" id="fcProgress"></div>
   <div class="fc-study-area" id="fcStudyArea"></div>
@@ -54,7 +55,7 @@
     <select id="quizCat"><option value="">All Categories</option><option value="african">African</option><option value="asian">Asian</option><option value="ancient">Ancient</option><option value="european">European</option><option value="latin">Latin American</option><option value="us">U.S.</option><option value="other">Other</option></select>
     <button id="startQuizBtn">Start Quiz (10 Questions)</button>
   </div>
-  <div id="quizArea"><div class="empty-state"><div class="empty-icon">&#128221;</div><p>Click "Start Quiz" to begin a 10-question multiple choice quiz!</p></div></div>
+  <div id="quizArea"><div class="empty-state"><div class="empty-icon">&#128221;</div><p>Tap "Start Quiz" to begin a 10-question multiple choice quiz!</p></div></div>
 </div>
 <div class="tab-content" id="tab-reading">
   <div class="reading-controls">
